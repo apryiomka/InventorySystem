@@ -64,7 +64,7 @@ namespace inventorySystem.Web.Controllers
                 return InternalServerError(); //something went wrong
             }
 
-            //show the error list, etc
+            //just join the list of errors
             return BadRequest(string.Join(" ", addresult.Errors));
         }
 
@@ -86,8 +86,8 @@ namespace inventorySystem.Web.Controllers
                 return InternalServerError(); //something went wrong
             }
 
-            //show the error list, etc
-            return BadRequest("Invalid inventory item");
+            //just join the list of errors
+            return BadRequest(string.Join(" ", addresult.Errors));
         }
     }
 }
