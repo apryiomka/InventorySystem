@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using inventorySyctem.Services.Entities;
 
@@ -19,14 +20,15 @@ namespace inventorySyctem.Services
         /// <returns>
         /// The add result of the Inventory Item
         /// </returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        Task<AddInventoryItemResult> AddNewItem(InventoryItem inventoryItem);
+        /// <exception cref="ArgumentNullException">inventoryItem is required</exception>
+        Task<Guid> AddNewItem(InventoryItem inventoryItem);
 
         /// <summary>
         /// Deletes items from the inventory by label
         /// </summary>
         /// <param name="itemLabel">The item label</param>
-        /// <returns></returns>
-        Task<DeleteInventoryItemResult> DeleteItems(string itemLabel);
+        /// <returns>The list of the removed items</returns>
+        /// <exception cref="ArgumentNullException">itemLabel is required</exception>
+        Task<IEnumerable<InventoryItem>> TakeItems(string itemLabel);
     }
 }

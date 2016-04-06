@@ -1,11 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.Http.ModelBinding;
 using AutoMapper;
 using inventorySyctem.Services;
 using inventorySyctem.Services.Entities;
+using inventorySystem.Web.Filters;
 using inventorySystem.Web.Models;
 
 namespace inventorySystem.Web.Controllers
@@ -16,6 +15,7 @@ namespace inventorySystem.Web.Controllers
     /// <remarks>
     /// The main controller to manage inventory items
     /// </remarks>
+    [ArgumentNullExceptionFilter]
     public class InventoryController : ApiController
     {
         private readonly IInventoryManager _inventoryManager;
@@ -49,45 +49,25 @@ namespace inventorySystem.Web.Controllers
         /// Adds item to the inventory
         /// </summary>
         /// <returns></returns>
-        public async Task<IHttpActionResult> PostAddItem(InventoryItemModel itemModel)
+        /// <remarks>Post JSON object with POST verb to  http://host/api/inventory </remarks>
+        [EntityValidationExceptionFilter]
+        public async Task<IHttpActionResult> Post(InventoryItemModel itemModel)
         {
             var inventoryItem = _mapper.Map<InventoryItemModel, InventoryItem>(itemModel);
-            var addresult = await _inventoryManager.AddNewItem(inventoryItem);
+            var itemId = await _inventoryManager.AddNewItem(inventoryItem);
 
-            if (addresult.Result == ActionResult.ResultType.Success)
-            {
-                return Ok(addresult.Id);
-            }
-
-            if (addresult.Result == ActionResult.ResultType.NotSet)
-            {
-                return InternalServerError(); //something went wrong
-            }
-
-            //just join the list of errors
-            return BadRequest(string.Join(" ", addresult.Errors));
+            return Ok(itemId);
         }
 
         /// <summary>
         /// Deletes items by label from the inventory
         /// </summary>
         /// <returns></returns>
-        public async Task<IHttpActionResult> PostDeleteItem(string labelName)
+        /// <remarks>Post with DELETE verb to  http://host/api/inventory/my awesome label</remarks>
+        public async Task<IHttpActionResult> Delete(string labelName)
         {
-            var addresult = await _inventoryManager.DeleteItems(labelName);
-
-            if (addresult.Result == ActionResult.ResultType.Success)
-            {
-                return Ok(Mapper.Map<IEnumerable<InventoryItem>, IEnumerable<InventoryItemModel>>(addresult.DeletedItems));
-            }
-
-            if (addresult.Result == ActionResult.ResultType.NotSet)
-            {
-                return InternalServerError(); //something went wrong
-            }
-
-            //just join the list of errors
-            return BadRequest(string.Join(" ", addresult.Errors));
+            var deletedItems = await _inventoryManager.TakeItems(labelName);
+            return Ok(Mapper.Map<IEnumerable<InventoryItem>, IEnumerable<InventoryItemModel>>(deletedItems));
         }
     }
 }

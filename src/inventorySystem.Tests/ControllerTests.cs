@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using System.Web.Http.Results;
 using AutoMapper;
 using inventorySyctem.Services;
@@ -17,21 +18,15 @@ namespace inventorySystem.Tests
         private readonly IMapper _mapper = Web.App_Start.Mapper.ConfigureMapper();
 
         [TestMethod]
-        public void lBad_Request_When_manager_Returns_Error()
+        [ExpectedException(typeof(AggregateException))]
+        public void Throws_Exception_When_Argument_Null_Exception_Is_Thrown()
         {
-            var addErrorResult = new AddInventoryItemResult
-            {
-                Result = ActionResult.ResultType.Error,
-                Errors = new []{ "My test error" }
-            };
-
-            _invenMock.Setup(manager => manager.AddNewItem(It.IsAny<InventoryItem>())).Returns(Task.FromResult(addErrorResult));
+            _invenMock.Setup(manager => manager.AddNewItem(It.IsAny<InventoryItem>())).Throws(new ArgumentNullException());
 
             var inventoryController = new InventoryController(_invenMock.Object, _mapper);
-            var result = inventoryController.PostAddItem(new InventoryItemModel()).Result as BadRequestErrorMessageResult;
+            var result = inventoryController.Post(new InventoryItemModel()).Result;
 
-            Assert.IsNotNull(result);
-            Assert.IsTrue(result.Message.Equals("My test error"));
+            Assert.IsNull(result);
         }
     }
 }

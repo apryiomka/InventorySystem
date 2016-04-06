@@ -4,11 +4,9 @@ using Autofac;
 using Autofac.Integration.WebApi;
 using AutoMapper;
 using inventorySyctem.Services;
-using inventorySyctem.Services.BackgroundScheduler;
-using inventorySyctem.Services.EmailService;
-using inventorySyctem.Services.Entities;
+using inventorySyctem.Services.Bus;
+using inventorySyctem.Services.Bus.Subscribers;
 using inventorySyctem.Services.Reporitory;
-using inventorySystem.Web.Models;
 
 namespace inventorySystem.Web.App_Start
 {
@@ -29,11 +27,16 @@ namespace inventorySystem.Web.App_Start
             // Register your Web API controllers.
             builder.RegisterApiControllers(Assembly.GetExecutingAssembly());
 
-            //register the InventoryManager instance
+
             builder.RegisterType<InventoryManager>().As<IInventoryManager>();
             builder.RegisterType<InMemoryInventoryRepository>().As<IInventoryRepository>();
-            builder.RegisterType<QuartzService>().As<IQuartzService>();
-            builder.RegisterType<EmailService>().As<IEmailService>();
+            builder.RegisterType<Bus>().As<IBus>();
+            builder.RegisterType<SubscriberRouter>().As<IRouter>();
+
+            //subscribers
+            builder.RegisterType<EmailSubscriber>().As<ISubscriber>();
+            builder.RegisterType<SchedulerSubscriber>().As<ISubscriber>();
+            builder.RegisterType<SmsSubscriber>().As<ISubscriber>();
 
             //add mapper
             builder.RegisterInstance(Mapper.ConfigureMapper()).As<IMapper>();

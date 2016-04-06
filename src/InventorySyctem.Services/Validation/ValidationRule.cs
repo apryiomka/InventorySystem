@@ -16,6 +16,6 @@
         /// <summary>
         /// Gets the label of the broken rule
         /// </summary>
-        public abstract string BrokenRuleLabel { get; }
+        public abstract EntityValidationException ValidationException { get; }
     }
 }

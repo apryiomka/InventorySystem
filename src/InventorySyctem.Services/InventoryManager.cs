@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using inventorySyctem.Services.BackgroundScheduler;
-using inventorySyctem.Services.EmailService;
+using inventorySyctem.Services.Bus;
+using inventorySyctem.Services.Bus.Messages;
 using inventorySyctem.Services.Entities;
 using inventorySyctem.Services.Reporitory;
 using inventorySyctem.Services.Validation;
@@ -14,86 +15,65 @@ namespace inventorySyctem.Services
     public class InventoryManager : IInventoryManager
     {
         private readonly IInventoryRepository _inventoryRepository;
-        private readonly IQuartzService _quartzService;
-        private readonly IEmailService _emailService;
+        private readonly IBus _bus;
 
         /// <summary>
         /// Creates the instance of <see cref="InventoryManager"/>
         /// </summary>
         /// <param name="inventoryRepository">The instance of <see cref="IInventoryRepository"/></param>
-        /// <param name="quartzService">The instance of <see cref="IQuartzService"/></param>
-        /// <param name="emailService">Email service to send item notifiacations</param>
+        /// <param name="bus">The service bus</param>
         public InventoryManager(
             IInventoryRepository inventoryRepository,
-            IQuartzService quartzService,
-            IEmailService emailService)
+            IBus bus)
         {
             _inventoryRepository = inventoryRepository;
-            _quartzService = quartzService;
-            _emailService = emailService;
+            _bus = bus;
         }
 
-        async Task<AddInventoryItemResult> IInventoryManager.AddNewItem(InventoryItem inventoryItem)
+        async Task<Guid> IInventoryManager.AddNewItem(InventoryItem inventoryItem)
         {
-            if (inventoryItem == null) return new AddInventoryItemResult
-            {
-                Result = ActionResult.ResultType.Error,
-                Errors = new []{ "Inventory item is required." }
-            };
+            if (inventoryItem == null) throw new ArgumentNullException(nameof(inventoryItem));
 
             //validate the item
-            var validationError = inventoryItem.Validate();
-            if (validationError != null)
-            {
-                return new AddInventoryItemResult
-                {
-                    Result = ActionResult.ResultType.Error,
-                    Errors = new[] {validationError}
-                };
-            }
+            //tyhrows an error if not valid
+            inventoryItem.Validate();
 
             //assign a new item id
             inventoryItem.Id = Guid.NewGuid();
             await _inventoryRepository.SaveInventoryItem(inventoryItem);
 
-            //return saved item
-            return new AddInventoryItemResult
+            if (inventoryItem.Expiration.HasValue)
             {
-                Result = ActionResult.ResultType.Success,
-                Id = inventoryItem.Id
-            };
+                //schedule a message
+                _bus.Publish(new ScheduleDeleteMessage
+                {
+                    DeletionDate = inventoryItem.Expiration.Value,
+                    InventoryItemId = inventoryItem.Id
+                });
+            }
+
+            //return saved item
+            return inventoryItem.Id;
         }
 
-        async Task<DeleteInventoryItemResult> IInventoryManager.DeleteItems(string itemLabel)
+        async Task<IEnumerable<InventoryItem>> IInventoryManager.TakeItems(string itemLabel)
         {
             //return error if label is null or white spaces
-            if (string.IsNullOrWhiteSpace(itemLabel)) return new DeleteInventoryItemResult
-            {
-                Result = ActionResult.ResultType.Error,
-                Errors = new []{ "Item label is required" }
-            };
+            if (string.IsNullOrWhiteSpace(itemLabel)) throw new ArgumentNullException(nameof(itemLabel));
+
             //call repo to delete the items
             var deletedItems = await _inventoryRepository.DeleteInventoryItem(itemLabel);
             //return the deleted items
-            if (deletedItems.Count > 0)
+            foreach (var deletedItem in deletedItems)
             {
-                foreach (var deletedItem in deletedItems)
-                {
-                    await _emailService.SendNotificationEmail(deletedItem.Label);
-                }
-
-                return new DeleteInventoryItemResult
-                {
-                    DeletedItems = await _inventoryRepository.DeleteInventoryItem(itemLabel),
-                    Result = ActionResult.ResultType.Success
-                };
+                //send email of the deleted item
+                _bus.Publish(new EmailMessage { Email = "someemail@example.com"});
+                //send SMS message
+                _bus.Publish(new SmsMessage { SmsNumber = "123456789" });
+                _bus.Commit();
             }
             //return error if no items were deleted
-            return new DeleteInventoryItemResult
-            {
-                Result = ActionResult.ResultType.Error,
-                Errors = new[] { "No items were deleted." }
-            };
+            return deletedItems;
         }
     }
 }

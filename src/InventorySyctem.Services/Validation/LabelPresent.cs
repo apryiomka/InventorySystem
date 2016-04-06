@@ -19,6 +19,6 @@ namespace inventorySyctem.Services.Validation
         /// <summary>
         /// Gets the label of the broken rule
         /// </summary>
-        public override string BrokenRuleLabel => "The label is required.";
+        public override EntityValidationException ValidationException => new EntityValidationException("Label", "Label is required");
     }
 }

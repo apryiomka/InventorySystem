@@ -12,19 +12,21 @@ namespace inventorySyctem.Services.Validation
         private static readonly List<ValidationRule<InventoryItem>> _validationRules 
             = new List<ValidationRule<InventoryItem>>
             {
-                new LabelPresentValidationRule()
+                new LabelPresentValidationRule(), //validate the label
+                new DateInFutureRule() // validate the date
             };
 
         /// <summary>
         /// validates the inventory item and returns the first broken rule
         /// </summary>
         /// <param name="inventoryItem">The instance of <see cref="InventoryItem"/></param>
-        /// <returns>
-        /// We do not check for all broken rules, just return the first one
-        /// </returns>
-        public static string Validate(this InventoryItem inventoryItem)
+        /// <exception cref="EntityValidationException">Throws entity validation exception if the rule is broken</exception>
+        public static void Validate(this InventoryItem inventoryItem)
         {
-            return _validationRules.FirstOrDefault(rule => !rule.IsValid(inventoryItem))?.BrokenRuleLabel;
+            foreach (var rule in _validationRules.Where(rule => !rule.IsValid(inventoryItem)))
+            {
+                throw rule.ValidationException;
+            }
         }
     }
 }
